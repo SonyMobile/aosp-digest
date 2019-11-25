@@ -1,3 +1,8 @@
+"""
+Provides actions over cached responses from Gerrit:
+- read/write cached json Gerrit response from/to a gzip file
+- format cached structure in an html appropriate for email display
+"""
 import datetime
 import gzip
 import json
@@ -5,11 +10,20 @@ import os
 import re
 
 def write_cache(filename, cache):
+    """
+    Dump json response from Gerrit into a byte sequence encoded with utf-8
+    and archive in a gzip file.
+    """
+
     f = gzip.open(filename, 'wb')
-    f.write(json.dumps(cache, indent=4, sort_keys=True))
+    f.write(bytearray(json.dumps(cache, indent=4, sort_keys=True), encoding='utf-8'))
     f.close()
 
 def read_cache(filename):
+    """
+    Read a gzip file and unpack into a json object.
+    """
+
     if not os.path.exists(filename):
         cache = []
     else:
@@ -29,6 +43,10 @@ def _filter_cache(cache, filters):
     return tree
 
 def format_css():
+    """
+    Provide a simple style for formatting cache into html.
+    """
+
     return '''\
 <style type="text/css">
     h1 {
@@ -79,57 +97,74 @@ def format_css():
 '''
 
 def format_html(cache, filters):
+    """
+    Provide a simple html for the body of report. Response from
+    Gerrit acquired from the cached json is munged into an html.
+    """
+
     tree = _filter_cache(cache, filters)
-    html = u''
+    html = ''
     for (title, node) in sorted(tree):
-        html += u'<h2>%s</h2>\n' % unicode(title)
-        html += u'<ul>\n'
-        if not len(node):
+        html += '<h2>%s</h2>\n' % str(title)
+        html += '<ul>\n'
+        if not node:
             html += '<li>No changes</li>\n'
         else:
             for (project, changes) in sorted(node):
-                html += u'<li>%s\n' % unicode(project)
-                html += u'<ul>\n'
-                for c in sorted(changes, key=lambda x: x['number']):
-                    def _format_size((insertions, deletions)):
+                html += '<li>%s\n' % str(project)
+                html += '<ul>\n'
+                for change in sorted(changes, key=lambda x: x['number']):
+                    def _format_size(chgs):
+                        (insertions, deletions) = chgs
                         if insertions > 0 and deletions > 0:
-                            out = u'(+%d,&nbsp;-%d)' % (insertions, deletions)
+                            out = '(+%d,&nbsp;-%d)' % (insertions, deletions)
                         elif insertions > 0:
-                            out = u'(+%d)' % insertions
+                            out = '(+%d)' % insertions
                         elif deletions > 0:
-                            out = u'(-%d)' % deletions
+                            out = '(-%d)' % deletions
                         else:
-                            out = u''
+                            out = ''
                         return out
-                    number = unicode(c['number'])
-                    size = _format_size(c['size'])
-                    author = unicode(c['author']['name']).replace(' ', '&nbsp;')
-                    email = unicode(c['author']['email'])
-                    subject = unicode(c['subject'])
-                    html += u'<li><a href="http://android-review.googlesource.com/%s">%s</a> %s %s %s &lt;%s&gt;</li>\n' % (number, number, subject, size, author, email)
-                html += u'</ul>\n'
-                html += u'</li>\n'
-        html += u'</ul>\n'
+                    number = str(change['number'])
+                    size = _format_size(change['size'])
+                    author = str(change['author']['name']).replace(' ', '&nbsp;')
+                    email = str(change['author']['email'])
+                    subject = str(change['subject'])
+                    html += '<li>'
+                    html += '<a href="http://android-review.googlesource.com/%s">%s</a>' % (number,
+                                                                                            number)
+                    html += ' %s %s %s &lt;%s&gt;</li>\n' % (subject,
+                                                             size,
+                                                             author,
+                                                             email)
+                html += '</ul>\n'
+                html += '</li>\n'
+        html += '</ul>\n'
     return html
 
 def format_json(cache, filters):
+    """
+    Utility method used to pretty print cached json to
+    a debug log.
+    """
+
     tree = _filter_cache(cache, filters)
-    if len(tree) == 0:
+    if not tree:
         return json.dumps(dict(), indent=4, sort_keys=True)
     return json.dumps(dict(tree), indent=4, sort_keys=True)
 
-def filter_projects(c, projects):
-    return c['project'] in projects
+def filter_projects(change, projects):
+    return change['project'] in projects
 
-def filter_date_updated(c, date):
-    return c['updated'].startswith(date)
+def filter_date_updated(change, date):
+    return change['updated'].startswith(date)
 
-def filter_date_updated_today(c):
-    return filter_date_updated(c, datetime.datetime.now().strftime('%Y-%m-%d'))
+def filter_date_updated_today(change):
+    return filter_date_updated(change, datetime.datetime.now().strftime('%Y-%m-%d'))
 
-def filter_author_sony(c):
-    return re.match(r'.*@sony.*', c['author']['email'])
+def filter_author_sony(change):
+    return re.match(r'.*@sony.*', change['author']['email'])
 
-def filter_date_cached_today(c):
+def filter_date_cached_today(change):
     today = datetime.datetime.now().strftime('%Y-%m-%d')
-    return c['cached'].startswith(today)
+    return change['cached'].startswith(today)

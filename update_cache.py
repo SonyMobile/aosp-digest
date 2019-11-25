@@ -1,23 +1,31 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+"""
+Fetch changes from Gerrit using curl and cache the resulting json in a gzip file.
+"""
 import datetime
-import gerrit
 import json
 import subprocess
 
+import gerrit
+
 def _curl_chunk(cmd):
-    def wash_gerrit_reply(dirty):
-        if not dirty.startswith(")]}'\n"):
+    def _wash_gerrit_reply(dirty):
+        if not dirty.startswith(b')]}\'\n'):
             raise Exception('wash_gerrit_reply: malformed input: ' + dirty)
         return dirty[5:]
 
     prefix = 'https://android-review.googlesource.com/'
     url = prefix + cmd
-    argv = ['curl', '--anyauth',  '-n',  '-H',  'Content-Type: application/json',  '-H',  'Accept-Type: application/json', url]
+    argv = ['curl',
+            '--anyauth', '-n',
+            '-H', 'Content-Type: application/json',
+            '-H', 'Accept-Type: application/json',
+            url]
     proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout, stderr) = proc.communicate()
     if proc.returncode != 0:
         raise Exception('curl: ' + stderr)
-    clean = wash_gerrit_reply(stdout)
+    clean = _wash_gerrit_reply(stdout)
     return json.loads(clean)
 
 def _curl(cmd):
@@ -28,10 +36,10 @@ def _curl(cmd):
             chunk = _curl_chunk(cmd + '&start=' + str(offset))
         else:
             chunk = _curl_chunk(cmd)
-        if len(chunk) > 0:
+        if chunk:
             everything += chunk
 
-        if len(chunk) > 0 and '_more_changes' in chunk[-1]:
+        if chunk and '_more_changes' in chunk[-1]:
             offset += len(chunk)
         else:
             break
@@ -43,9 +51,17 @@ def _fetch_list_of_new_changes(cache):
     mini_cache = dict(zip(numbers, timestamps))
     updated_changes = {}
     # Unauthenticated access like this will cause quota to trigger for anonymous users
-    #for change in _curl('changes/?q=status:merged+-age:5days+branch:master&o=LABELS&o=ALL_REVISIONS&o=ALL_COMMITS&o=ALL_FILES'):
+    #   url =  'changes/'
     # Instead, force authenticate access:
-    for change in _curl('a/changes/?q=status:merged+-age:5days+branch:master&o=LABELS&o=ALL_REVISIONS&o=ALL_COMMITS&o=ALL_FILES'):
+    url = 'a/changes/'
+    url += '?q=status:merged'
+    url += '+-age:5days+' # note the '-' for previous 5 days
+    url += 'branch:master'
+    url += '&o=LABELS'
+    url += '&o=ALL_REVISIONS'
+    url += '&o=ALL_COMMITS'
+    url += '&o=ALL_FILES'
+    for change in _curl(url):
         number = str(change['_number'])
         if number not in mini_cache or mini_cache[number] != change['updated']:
             updated_changes[number] = change
@@ -53,7 +69,7 @@ def _fetch_list_of_new_changes(cache):
     return updated_changes
 
 def _fetch_change(data):
-    if len(data['revisions']) == 0:
+    if not data['revisions']:
         # changes of this type can't even be displayed in the Gerrit web UI:
         # let's just ignore them
         return None
@@ -63,7 +79,7 @@ def _fetch_change(data):
     out['updated'] = data['updated']
     out['project'] = data['project']
 
-    revision_keys = data['revisions'].keys()
+    revision_keys = list(data['revisions'].keys())
     latest_revision = data['revisions'][revision_keys[-1]]
     out['message'] = latest_revision['commit']['message']
     out['files'] = latest_revision['files']
@@ -87,6 +103,10 @@ def _fetch_change(data):
     return out
 
 def main():
+    """
+    See module docstring.
+    """
+
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f') + '000'
     threshold = (datetime.datetime.now() - datetime.timedelta(days=30)).strftime('%Y-%m-%d')
     cache_filename = 'cache.gz'

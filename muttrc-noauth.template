@@ -1,0 +1,4 @@
+# SMTP config
+set realname = "<DISPLAY NAME>"
+set from = "email@addr.ess"
+set smtp_url = "smtp://smtp.server.domain"
