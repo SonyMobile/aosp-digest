@@ -89,7 +89,7 @@ class Recipient:
 
         self._send_email(html, gpg_recipient)
 
-def main():
+def main(args):
     """
     Send emails to requested users filed in the users folder (use '-a'
     for all users, or '-u user.address' for specific user) -- OR --
@@ -102,7 +102,7 @@ def main():
     logging.basicConfig(format='%(message)s', level=logging.INFO)
 
     try:
-        opts, _ = getopt.getopt(sys.argv[1:], 'adu:r:', ['all-users', 'dry-run', 'user=', 'rec='])
+        opts, _ = getopt.getopt(args, 'adu:r:', ['all-users', 'dry-run', 'user=', 'rec='])
     except getopt.GetoptError as err:
         logging.error(str(err))
         sys.exit(1)
@@ -133,4 +133,4 @@ def main():
             logging.error("Could not send email for user %s: %s", user, str(err))
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
