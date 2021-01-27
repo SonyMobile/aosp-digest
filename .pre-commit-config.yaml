@@ -1,0 +1,38 @@
+repos:
+- repo: local
+  hooks:
+  - id: python-safety-dependencies-check
+    name: safety
+    entry: safety
+    args: [check, --full-report, --file]
+    language: system
+    files: requirements.txt
+  - id: python-safety-dev-dependencies-check
+    name: dev-safety
+    entry: safety
+    args: [check, --full-report, --file]
+    files: dev-requirements.txt
+    language: system
+  - id: python-isort
+    name: isort
+    entry: isort
+    language: python
+    types: [python]
+  - id: python-blacken
+    name: black
+    entry: black
+    language: python
+    types: [python]
+  - id: python-pylint-check
+    name: pylint
+    entry: pylint
+    language: python
+    types: [python]
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+  - id: check-yaml
+- repo: https://github.com/pre-commit/mirrors-csslint
+  rev: v1.0.3
+  hooks:
+  - id: csslint

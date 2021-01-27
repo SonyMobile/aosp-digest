@@ -1,0 +1,13 @@
+#
+# Copyright 2021 Sony Mobile Communications Inc.
+# SPDX-License-Identifier: MIT
+#
+gerrit:
+  project: "name of the project on url, e.g. AOSP, Chromium, Gerrit etc."
+  url: "--gerrit url--"
+  cache_filename: "--cache file name--"
+smtp:
+  url: "-- url to smtp server --"
+  authentication: (True|False)
+  uname: "-- smtp server user name --"
+  from: "-- 'From:' email address --"

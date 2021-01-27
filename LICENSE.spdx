@@ -1,0 +1,8 @@
+SPDXVersion: SPDX-2.1
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+PackageName: aosp-digest
+PackageOriginator: Zoran Jovanović <zoran.jovanovic@sony.com>
+PackageHomePage: https://github.com/SonyMobile/aosp-digest
+PackageLicenseDeclared: MIT
+PackageCopyrightText: Copyright 2019 Sony Mobile Communications Inc.

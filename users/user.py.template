@@ -1,0 +1,17 @@
+# pylint: disable=missing-docstring,duplicate-code
+#
+# Copyright 2021 Sony Mobile Communications Inc.
+# SPDX-License-Identifier: MIT
+#
+import re
+
+EMAIL = "email@domain"
+
+WATCHED_PROJECTS = [
+    "project/listed/gerrit/instance",
+]
+
+FILTERS = [
+    (("Watched projects", lambda c: c["project"] in WATCHED_PROJECTS)),
+    (("Contributions per domain", lambda c: re.match(r".*@domain.*", c["author"]["email"]))),
+]
